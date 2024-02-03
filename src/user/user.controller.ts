@@ -1,19 +1,9 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  Inject,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Get, Inject, Post, Query } from '@nestjs/common';
 import { UserService } from './user.service';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { EmailService } from '../email/email.service';
 import { RedisService } from '../redis/redis.service';
+import { LoginUserDto } from './dto/login-user.dto';
 
 @Controller('user')
 export class UserController {
@@ -25,11 +15,17 @@ export class UserController {
 
   constructor(private readonly userService: UserService) {}
 
+  /**
+   * 注册接口
+   * **/
   @Post('register')
   async register(@Body() registerUser: RegisterUserDto) {
     return await this.userService.register(registerUser);
   }
 
+  /**
+   * 获取验证码的方法
+   * */
   @Get('register-captcha')
   async captcha(@Query('address') address: string) {
     const code = Math.random().toString().slice(2, 8);
@@ -44,5 +40,29 @@ export class UserController {
              </div>`,
     });
     return '发送成功';
+  }
+
+  /**
+   * 初始化数据
+   * **/
+  @Get('init-data')
+  async initData() {
+    await this.userService.initData();
+    return '成功';
+  }
+
+  /**
+   * 登陆
+   * **/
+  @Post('login')
+  async userLogin(@Body() loginUser: LoginUserDto) {
+    return await this.userService.login(loginUser, false);
+  }
+  /**
+   * 管理员登陆
+   * **/
+  @Post('admin/login')
+  async adminLogin(@Body() loginUser: LoginUserDto) {
+    return await this.userService.login(loginUser, true);
   }
 }
