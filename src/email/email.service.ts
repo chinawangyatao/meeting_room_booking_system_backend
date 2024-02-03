@@ -1,13 +1,5 @@
-import { CreateEmailDto } from './dto/create-email.dto';
-import { UpdateEmailDto } from './dto/update-email.dto';
 import { createTransport, Transporter } from 'nodemailer';
-import {
-  EMAILPASS,
-  EMAILUSERNAME,
-  EMILHOST,
-  EMILPORT,
-  SYSTEMTITLE,
-} from '../config';
+import { ConfigService } from '@nestjs/config';
 
 /**
  * 邮箱注册服务
@@ -15,14 +7,14 @@ import {
 export class EmailService {
   transporter: Transporter;
 
-  constructor() {
+  constructor(private configService: ConfigService) {
     this.transporter = createTransport({
-      host: EMILHOST,
-      port: EMILPORT,
+      host: this.configService.get('nodemailer_host'),
+      port: this.configService.get('nodemailer_port'),
       secure: false,
       auth: {
-        user: EMAILUSERNAME,
-        pass: EMAILPASS,
+        user: this.configService.get('nodemailer_auth_user'),
+        pass: this.configService.get('nodemailer_auth_pass'),
       },
     });
   }
@@ -30,32 +22,12 @@ export class EmailService {
   async sendMail({ to, subject, html }) {
     await this.transporter.sendMail({
       from: {
-        name: SYSTEMTITLE,
-        address: EMAILUSERNAME,
+        name: this.configService.get('nodemailer_system_title'),
+        address: this.configService.get('nodemailer_auth_user'),
       },
       to,
       subject,
       html,
     });
-  }
-
-  create(createEmailDto: CreateEmailDto) {
-    return 'This action adds a new email';
-  }
-
-  findAll() {
-    return `This action returns all email`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} email`;
-  }
-
-  update(id: number, updateEmailDto: UpdateEmailDto) {
-    return `This action updates a #${id} email`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} email`;
   }
 }
