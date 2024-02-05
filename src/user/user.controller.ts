@@ -14,6 +14,10 @@ import { RedisService } from '../redis/redis.service';
 import { LoginUserDto } from './dto/login-user.dto';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { RequireLogin, UserInfo } from '../custom.decorator';
+import { UserDetailVo } from './viewObject/user-info.vo';
+import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
+import { UpdateUserDto } from './dto/udpate-user.dto';
 
 @Controller('user')
 export class UserController {
@@ -40,6 +44,26 @@ export class UserController {
   }
 
   /**
+   * 查询用户信息的接口
+   * */
+  @Get('info')
+  @RequireLogin()
+  async info(@UserInfo('userId') userId: number) {
+    const user = await this.userService.findUserDetailById(userId);
+    const vo = new UserDetailVo();
+    vo.id = user.id;
+    vo.email = user.email;
+    vo.username = user.username;
+    vo.headPic = user.headPic;
+    vo.phoneNumber = user.phoneNumber;
+    vo.nickName = user.nickName;
+    vo.createTime = user.createTime;
+    vo.isFrozen = user.isFrozen;
+
+    return vo;
+  }
+
+  /**
    * 获取验证码的方法
    * */
   @Get('register-captcha')
@@ -54,6 +78,52 @@ export class UserController {
                   <p>欢迎使用微梦创新科技的产品。</p>
                   <p>你的注册验证码是 <strong><span style="font-size:24px">${code}</span></strong></p>
              </div>`,
+    });
+    return '发送成功';
+  }
+
+  /**
+   * 更新验证码的方法
+   * */
+  @Get('update/captcha')
+  async updateCaptcha(@Query('address') address: string) {
+    const code = Math.random().toString().slice(2, 8);
+
+    await this.redisService.set(
+      `update_user_captcha_${address}`,
+      code,
+      10 * 60,
+    );
+
+    await this.emailService.sendMail({
+      to: address,
+      subject: '更改用户信息验证码',
+      html: `<p>你的验证码是 ${code}</p>`,
+    });
+    return '发送成功';
+  }
+
+  /**
+   * 发送邮箱验证码
+   * */
+  @Get('update_password/captcha')
+  async updatePasswordCaptcha(@Query('address') address: string) {
+    const code = Math.random().toString().slice(2, 8);
+
+    await this.redisService.set(
+      `update_password_captcha_${address}`,
+      code,
+      10 * 60,
+    );
+
+    await this.emailService.sendMail({
+      to: address,
+      subject: '更改密码验证码',
+      html: `<div>
+                <p>欢迎使用微梦创新科技的产品。</p>
+                <p>你的更改密码验证码是 ${code}</p>
+              </div>
+              `,
     });
     return '发送成功';
   }
@@ -188,5 +258,26 @@ export class UserController {
   @Post('admin/login')
   async adminLogin(@Body() loginUser: LoginUserDto) {
     return await this.userService.login(loginUser, true);
+  }
+
+  /**
+   * 管理员和用户修改密码
+   * */
+  @Post(['update_password', 'admin/update_password'])
+  @RequireLogin()
+  async updatePassword(
+    @UserInfo('userId') userId: number,
+    @Body() passwordDto: UpdateUserPasswordDto,
+  ) {
+    return await this.userService.updatePassword(userId, passwordDto);
+  }
+
+  @Post(['update', 'admin/update'])
+  @RequireLogin()
+  async update(
+    @UserInfo('userId') userId: number,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    return await this.userService.update(userId, updateUserDto);
   }
 }
