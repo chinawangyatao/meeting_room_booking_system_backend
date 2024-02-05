@@ -1,9 +1,10 @@
 import { createTransport, Transporter } from 'nodemailer';
 import { ConfigService } from '@nestjs/config';
-
+import { Inject, Injectable } from '@nestjs/common';
 /**
  * 邮箱注册服务
  * **/
+@Injectable()
 export class EmailService {
   transporter: Transporter;
 
